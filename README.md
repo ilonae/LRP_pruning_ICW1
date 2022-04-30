@@ -8,7 +8,7 @@
 
 ## Reference 
 Altered implementation to explain pruning of a skin-lesion classifier on the HAM10000-dataset.
-This work was forked from the LRP-based structured Pruning approach stated by Yeom et al., which can be cited here:
+This work was forked from the LRP-based structured Pruning approach stated by Yeom et al., which can be cited as:
 ```
 @article{yeom2021pruning,
   title={Pruning by explaining: A novel criterion for deep neural network pruning},
