@@ -68,7 +68,9 @@ class PruningFineTuner:
 
         # Data Acquisition
         get_dataset = {
-            "cifar10": dataset.get_cifar10,  # CIFAR-10
+            "cifar10": dataset.get_cifar10,
+            "ham1000":dataset.get_ham1000,
+            "cq500": dataset.get_cq500  # CIFAR-10
             # 'imagenet': dataset.get_imagenet, # ImageNet
         }[self.args.data_type.lower()]
         train_dataset, test_dataset = get_dataset()
@@ -83,6 +85,9 @@ class PruningFineTuner:
                                                        shuffle=False, **kwargs)
 
         self.train_num = len(self.train_loader)
+        print(next(iter(self.train_loader))[0].shape)
+        print(len(self.train_loader))
+        print(len(self.test_loader))
         self.test_num = len(self.test_loader)
 
     def total_num_filters(self):
@@ -115,7 +120,7 @@ class PruningFineTuner:
                     if not os.path.isdir('checkpoint'):
                         os.mkdir('checkpoint')
                     print(f"save a model")
-                    save_loc = f"./checkpoint/{self.args.arch}_{self.args.data_type}_ckpt.pth"
+                    save_loc = f"./checkpoint/{self.args.arch}_{self.args.data_type}_orig_ckpt.pth"
                     torch.save(self.model.state_dict(), save_loc)
 
             except: #during fine-tuning
@@ -246,9 +251,8 @@ class PruningFineTuner:
         # self.correct += correct
 
         if self.save_loss:
-            sample_batch = torch.FloatTensor(1, 3, 32,
-                                             32).cuda() if self.args.cuda else torch.FloatTensor(
-                1, 3, 32, 32)
+            sample_batch = torch.FloatTensor(1, 3, 224,224).cuda() if self.args.cuda else torch.FloatTensor(
+                1, 3, 224,224)
             self.model = fcm.add_flops_counting_methods(self.model)
             self.model.eval().start_flops_count()
             _ = self.model(sample_batch)
@@ -307,9 +311,12 @@ class PruningFineTuner:
             param.requires_grad = True
 
         number_of_filters = self.total_num_filters()
+        print(number_of_filters)
         num_filters_to_prune_per_iteration = int(number_of_filters * self.args.pr_step)
         iterations = int(float(number_of_filters) / num_filters_to_prune_per_iteration)
         iterations = int(iterations * self.args.total_pr)
+        print(iterations)
+        print(num_filters_to_prune_per_iteration)
 
         self.ratio_pruned_filters = 1.0
         results_file = f"scenario1_results_{self.args.data_type}_{self.args.arch}_{self.args.method_type}_trial{self.args.trialnum:02d}.csv"
@@ -375,11 +382,11 @@ class PruningFineTuner:
             print("Fine tuning to recover from prunning iteration.")
             optimizer = optim.SGD(self.model.parameters(), lr=self.args.lr,
                                   momentum=self.args.momentum)
-            self.train(optimizer, epoches=10)
+            self.train(optimizer, epoches=5)
             self.dt.to_csv(results_file_train)
 
         print("Finished. Going to fine tune the model a bit more")
-        self.train(optimizer, epoches=10)
+        self.train(optimizer, epoches=2)
         self.dt.to_csv(results_file_train)
 
         self.ratio_pruned_filters = ratio_pruned_filters

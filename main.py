@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import os
 
-from modules.network import ResNet18, ResNet50, VGG_Alex
+from modules.network import ResNet18, ResNet50,AlexNet, VGG16, VGG19
 import modules.prune_resnet as modules_resnet
 import modules.prune_vgg as modules_vgg
 
@@ -18,17 +18,19 @@ import modules.prune_vgg as modules_vgg
 
 def get_args():
     # Training settings
-    parser = argparse.ArgumentParser(description='PyTorch VGG16 based ImageNet')
+    parser = argparse.ArgumentParser(description='PyTorch VGG19 based ImageNet')
 
-    parser.add_argument('--arch', default='vgg16', metavar='ARCH',
-                        help='model architecture: resnet18, resnet50, vgg16, alexnet')
-    parser.add_argument('--train-batch-size', type=int, default=100, metavar='N',
+    parser.add_argument('--arch', default='resnet18', metavar='ARCH',
+                        help='model architecture: resnet18, resnet50, vgg16, vgg19, alexnet')
+    parser.add_argument('--train-batch-size', type=int, default=8, metavar='N',
                         help='input batch size for training (default: 32)')
-    parser.add_argument('--test-batch-size', type=int, default=100, metavar='N',
+    parser.add_argument('--test-batch-size', type=int, default=4, metavar='N',
                         help='input batch size for testing (default: 20)')
-    parser.add_argument('--trialnum', type=int, default=1, metavar='N',
+    parser.add_argument('--trialnum', type=int, default=3, metavar='N',
                         help='trial number (default: 1)')
-    parser.add_argument('--epochs', type=int, default=100, metavar='N',
+    parser.add_argument('--classnum', type=int, default=7, metavar='N',
+                        help='classes number (default: 10)')
+    parser.add_argument('--epochs', type=int, default=10, metavar='N',
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate (default: 0.001)')
@@ -51,15 +53,15 @@ def get_args():
                         help='training data')
     parser.add_argument('--prune', type=bool, default=True, metavar='N',
                         help='pruning model')
-    parser.add_argument('--method-type', type=str, default='lrp', metavar='N',
+    parser.add_argument('--method-type', type=str, default='weight', metavar='N',
                         help='model architecture selection: grad/taylor/weight/lrp')
 
-    parser.add_argument('--total-pr', type=float, default=9.001 / 10.0, metavar='M',
+    parser.add_argument('--total-pr', type=float, default=6.0 / 10.0, metavar='M',
                         help='Total pruning rate')
-    parser.add_argument('--pr-step', type=float, default=0.05, metavar='M',
+    parser.add_argument('--pr-step', type=float, default=0.15, metavar='M',
                         help='Pruning step: 0.05 (5% for each step)')
 
-    parser.add_argument('--data-type', type=str, default='cifar10', metavar='N',
+    parser.add_argument('--data-type', type=str, default='ham1000', metavar='N',
                         help='model architecture selection: cifar10/imagenet')
     parser.add_argument('--save-dir', type=str, default='model', metavar='N',
                         help='saved directory')
@@ -70,25 +72,30 @@ def get_args():
     return args
 
 if __name__ == '__main__':
+    torch.cuda.empty_cache()
     args = get_args()
 
     model = {
-        'alexnet': VGG_Alex(arch=args.arch),
-        'vgg16': VGG_Alex(arch=args.arch),
-        'resnet18': ResNet18(),
-        'resnet50': ResNet50(),
+        'alexnet': AlexNet(),
+        'vgg16': VGG16(10),
+        'vgg19': VGG19(args.classnum),
+        'resnet18': ResNet18(args.classnum),
+        'resnet50': ResNet50(args.classnum)
     }[args.arch.lower()]
 
     if args.resume:
-        save_loc = f"./checkpoint/{args.arch}_{args.data_type}_ckpt.pth"
+        print("resuming model")
+        save_loc = f"./checkpoint/{args.arch}_{args.data_type}_orig_ckpt.pth"
         model.load_state_dict(torch.load(save_loc)) if args.cuda else model.load_state_dict(torch.load(save_loc))
 
-    if args.cuda:
+    if (args.cuda and args.arch.lower() in ['vgg19', 'alexnet']):
+        model.to('cuda')
+    elif args.cuda:
         model = model.cuda()
 
     if args.arch.lower() in ['resnet18', 'resnet50']:
         fine_tuner = modules_resnet.PruningFineTuner(args, model)
-    elif args.arch.lower() in ['vgg16', 'alexnet']:
+    elif args.arch.lower() in ['vgg16', 'vgg19', 'alexnet']:
         fine_tuner = modules_vgg.PruningFineTuner(args, model)
 
     if args.train:

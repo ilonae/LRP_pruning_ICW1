@@ -144,13 +144,16 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         self.in_planes = 64
 
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3,
-                               stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7,
+                               stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
+        self.avgpool = nn.AvgPool2d(7)
         self.linear = nn.Linear(512*block.expansion, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -162,27 +165,38 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+        out = self.maxpool(out)
+
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
         out = self.layer4(out)
-        out = F.avg_pool2d(out, 4)
+
+        out = self.avgpool(out)
         out = out.view(out.size(0), -1)
+        
         out = self.linear(out)
         return out
 
+def set_parameter_requires_grad(model, feature_extracting):
+    if feature_extracting:
+        for param in model.parameters():
+            param.requires_grad = False
 
-def ResNet18():
-    return ResNet(BasicBlock, [2, 2, 2, 2])
+def ResNet18(num_classes=10):
+    #print(ResNet(BasicBlock, [2, 2, 2, 2], num_classes))
+    return ResNet(BasicBlock, [2, 2, 2, 2], num_classes)
 
 
-def ResNet34():
-    return ResNet(BasicBlock, [3, 4, 6, 3])
+def ResNet34(num_classes=10):
+    return ResNet(BasicBlock, [3, 4, 6, 3],num_classes)
 
 
-def ResNet50():
-    return ResNet(Bottleneck, [3, 4, 6, 3])
+def ResNet50(num_classes=10):
+    return ResNet(Bottleneck, [3, 4, 6, 3],num_classes)
 
 
 def ResNet101():
@@ -191,6 +205,190 @@ def ResNet101():
 
 def ResNet152():
     return ResNet(Bottleneck, [3, 8, 36, 3])
+
+def VGG19(num_classes=10):
+    model_ft = models.vgg19_bn(pretrained=True)
+    #print(model_ft)
+    set_parameter_requires_grad(model_ft, False)
+    num_ftrs = model_ft.classifier[6].in_features
+    model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
+    return model_ft
+
+class VGG16(torch.nn.Module):
+
+    def __init__(self, num_classes):
+        super(VGG16, self).__init__()
+        
+        # calculate same padding:
+        # (w - k + 2*p)/s + 1 = o
+        # => p = (s(o-1) - w + k)/2
+        self.features = models.__dict__['vgg16'](pretrained=True)
+        self.classifier = nn.Sequential(OrderedDict([
+            ('do1', nn.Dropout()),
+            ('fc1', nn.Linear(25088, 4096)),
+            ('fc_relu1', nn.ReLU(inplace=True)),
+            ('do2', nn.Dropout()),
+            ('fc2', nn.Linear(4096, 4096)),
+            ('fc_relu2', nn.ReLU(inplace=True)),
+            ('fc3', nn.Linear(4096, num_classes))
+        ]))
+        self.modelName = 'vgg16'
+        
+        self.block_1 = nn.Sequential(
+                nn.Conv2d(in_channels=3,
+                          out_channels=64,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          # (1(32-1)- 32 + 3)/2 = 1
+                          padding=1), 
+                nn.ReLU(),
+                nn.Conv2d(in_channels=64,
+                          out_channels=64,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=(2, 2),
+                             stride=(2, 2))
+        )
+        self.block_2 = nn.Sequential(
+                nn.Conv2d(in_channels=64,
+                          out_channels=128,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),
+                nn.Conv2d(in_channels=128,
+                          out_channels=128,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=(2, 2),
+                             stride=(2, 2))
+        )
+        
+        self.block_3 = nn.Sequential(        
+                nn.Conv2d(in_channels=128,
+                          out_channels=256,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),
+                nn.Conv2d(in_channels=256,
+                          out_channels=256,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),        
+                nn.Conv2d(in_channels=256,
+                          out_channels=256,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),
+                nn.Conv2d(in_channels=256,
+                          out_channels=256,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=(2, 2),
+                             stride=(2, 2))
+        )
+        
+        self.block_4 = nn.Sequential(   
+                nn.Conv2d(in_channels=256,
+                          out_channels=512,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),        
+                nn.Conv2d(in_channels=512,
+                          out_channels=512,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),        
+                nn.Conv2d(in_channels=512,
+                          out_channels=512,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),
+                nn.Conv2d(in_channels=512,
+                          out_channels=512,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),   
+                nn.MaxPool2d(kernel_size=(2, 2),
+                             stride=(2, 2))
+        )
+
+        self.block_5 = nn.Sequential(
+                nn.Conv2d(in_channels=512,
+                          out_channels=512,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),            
+                nn.Conv2d(in_channels=512,
+                          out_channels=512,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),            
+                nn.Conv2d(in_channels=512,
+                          out_channels=512,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),
+                nn.Conv2d(in_channels=512,
+                          out_channels=512,
+                          kernel_size=(3, 3),
+                          stride=(1, 1),
+                          padding=1),
+                nn.ReLU(),   
+                nn.MaxPool2d(kernel_size=(2, 2),
+                             stride=(2, 2))             
+        )
+        
+        self.classifier = nn.Sequential(
+                nn.Linear(512, 4096),
+                nn.ReLU(True),
+                nn.Linear(4096, 4096),
+                nn.ReLU(True),
+                nn.Linear(4096, num_classes)
+        )
+               
+        for m in self.modules():
+            if isinstance(m, torch.nn.Conv2d):
+                #n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                #m.weight.data.normal_(0, np.sqrt(2. / n))
+                m.weight.detach().normal_(0, 0.05)
+                if m.bias is not None:
+                    m.bias.detach().zero_()
+            elif isinstance(m, torch.nn.Linear):
+                m.weight.detach().normal_(0, 0.05)
+                m.bias.detach().detach().zero_()
+        
+        
+    def forward(self, x):
+
+        x = self.block_1(x)
+        x = self.block_2(x)
+        x = self.block_3(x)
+        x = self.block_4(x)
+        x = self.block_5(x)
+        logits = self.classifier(x.view(-1, 512))
+        probas = F.softmax(logits, dim=1)
+
+        return logits, probas
+
+def AlexNet():
+    return models.AlexNet
 
 if __name__ == '__main__':
     # Dummy arguments
@@ -202,8 +400,9 @@ if __name__ == '__main__':
     # print(n(torch.zeros(2, 3, 32, 32)).shape)
 
     model = {
-        'alexnet': Net('alexnet'),
-        'vgg16': Net('VGG16'),
+        'alexnet': AlexNet(),
+        'vgg16': VGG16(),
+        'vgg19': VGG19(),
         'resnet18': ResNet18(),
         'resnet50': ResNet50(),
     }[args.arch.lower()]

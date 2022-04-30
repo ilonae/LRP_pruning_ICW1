@@ -227,6 +227,8 @@ class PruningFineTuner:
         # Data Acquisition
         get_dataset = {
             "cifar10": dataset.get_cifar10,  # CIFAR-10
+            "cq500": dataset.get_cq500,
+            "ham1000":dataset.get_ham1000
             # 'imagenet': dataset.get_imagenet, # ImageNet
         }[self.args.data_type.lower()]
         train_dataset, test_dataset = get_dataset()
