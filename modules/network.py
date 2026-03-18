@@ -20,7 +20,7 @@ class VGG_Alex(nn.Module):
         super(Net, self).__init__()
         # Model Selection
         num_classes = 10
-        original_model = models.__dict__[arch](pretrained=True)
+        original_model = models.__dict__[arch](weights='DEFAULT')
 
         if arch.startswith('vgg16'):
             self.features = original_model.features
@@ -153,7 +153,7 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
-        self.avgpool = nn.AvgPool2d(7)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.linear = nn.Linear(512*block.expansion, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -207,7 +207,7 @@ def ResNet152():
     return ResNet(Bottleneck, [3, 8, 36, 3])
 
 def VGG19(num_classes=10):
-    model_ft = models.vgg19_bn(pretrained=True)
+    model_ft = models.vgg19_bn(weights=models.VGG19_BN_Weights.DEFAULT)
     #print(model_ft)
     set_parameter_requires_grad(model_ft, False)
     num_ftrs = model_ft.classifier[6].in_features
@@ -222,7 +222,7 @@ class VGG16(torch.nn.Module):
         # calculate same padding:
         # (w - k + 2*p)/s + 1 = o
         # => p = (s(o-1) - w + k)/2
-        self.features = models.__dict__['vgg16'](pretrained=True)
+        self.features = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
         self.classifier = nn.Sequential(OrderedDict([
             ('do1', nn.Dropout()),
             ('fc1', nn.Linear(25088, 4096)),

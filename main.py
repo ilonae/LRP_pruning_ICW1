@@ -4,7 +4,6 @@
 @author: Seul-Ki Yeom, Philipp Seegerer, Sebastian Lapuschkin, Alexander Binder, Simon Wiedemann, Klaus-Robert Müller, Wojciech Samek
 '''
 
-from __future__ import print_function
 import argparse
 import numpy as np
 import torch
@@ -47,12 +46,12 @@ def get_args():
     # parser.add_argument('--prune', action='store_true', help='pruning model')
     # parser.add_argument('--relevance', action='store_true', help='Compute relevances')
     parser.add_argument('--norm', action='store_true', help='add normalization')
-    parser.add_argument('--resume', type=bool, default=True, metavar='N',
-                        help='if we have pretrained model')
-    parser.add_argument('--train', type=bool, default=False, metavar='N',
-                        help='training data')
-    parser.add_argument('--prune', type=bool, default=True, metavar='N',
-                        help='pruning model')
+    parser.add_argument('--resume', action=argparse.BooleanOptionalAction, default=True,
+                        help='load pretrained checkpoint (use --no-resume to skip)')
+    parser.add_argument('--train', action=argparse.BooleanOptionalAction, default=False,
+                        help='run training (use --train / --no-train)')
+    parser.add_argument('--prune', action=argparse.BooleanOptionalAction, default=True,
+                        help='run pruning (use --prune / --no-prune)')
     parser.add_argument('--method-type', type=str, default='weight', metavar='N',
                         help='model architecture selection: grad/taylor/weight/lrp')
 
@@ -75,13 +74,19 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     args = get_args()
 
-    model = {
-        'alexnet': AlexNet(),
-        'vgg16': VGG16(10),
-        'vgg19': VGG19(args.classnum),
-        'resnet18': ResNet18(args.classnum),
-        'resnet50': ResNet50(args.classnum)
-    }[args.arch.lower()]
+    arch = args.arch.lower()
+    if arch == 'alexnet':
+        model = AlexNet()
+    elif arch == 'vgg16':
+        model = VGG16(10)
+    elif arch == 'vgg19':
+        model = VGG19(args.classnum)
+    elif arch == 'resnet18':
+        model = ResNet18(args.classnum)
+    elif arch == 'resnet50':
+        model = ResNet50(args.classnum)
+    else:
+        raise ValueError(f"Unknown architecture: {args.arch}")
 
     if args.resume:
         print("resuming model")
