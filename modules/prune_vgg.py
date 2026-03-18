@@ -1,7 +1,6 @@
 # -*- encoding: utf-8 -*-
 # Train, Prune, LRP True & False
 
-from __future__ import print_function
 import numpy as np
 import torch
 import copy
@@ -10,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import models, datasets, transforms
-from torch.autograd import Variable, Function
+from torch.autograd import Function
 import modules.data as dataset
 from modules.lrp import lrp_prune
 from modules.prune_layer import *
@@ -253,7 +252,6 @@ class PruningFineTuner:
         for data, target in self.test_loader:
             if self.args.cuda:
                 data, target = data.cuda(), target.cuda()
-            data, target = Variable(data), Variable(target)
             output = self.model(data)
 
             test_loss += self.criterion(output, target).item()
@@ -289,7 +287,6 @@ class PruningFineTuner:
         for batch_idx, (data, target) in enumerate(self.train_loader):
             if self.args.cuda:
                 data, target = data.cuda(), target.cuda()
-            data, target = Variable(data), Variable(target)
             self.train_batch(optimizer, batch_idx, data, target, rank_filters)
 
         if self.save_loss:

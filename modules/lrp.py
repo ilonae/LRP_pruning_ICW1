@@ -15,7 +15,7 @@ def lrp_prune(module, R, lrp_var=None, param=None):
                                                                                   torch.nn.modules.pooling.MaxPool2d):
             return Pooling(module, R, lrp_var, param)
         else:
-            NameError("No function")
+            raise NotImplementedError(f"No LRP rule defined for module type: {type(module).__name__}")
 
 def gradprop_linear(weight, DY):
     return torch.mm(DY, weight)

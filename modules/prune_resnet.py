@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.autograd import Variable
 import modules.data as dataset
 from modules.filterprune import FilterPrunner
 import pandas as pd
@@ -141,7 +140,6 @@ class PruningFineTuner:
         for batch_idx, (data, target) in enumerate(self.train_loader):
             if self.args.cuda:
                 data, target = data.cuda(), target.cuda()
-            data, target = Variable(data), Variable(target)
             self.train_batch(optimizer, batch_idx, data, target, rank_filters)
 
         if self.save_loss == True and rank_filters == False: #save train_loss only during fine-tuning
@@ -231,8 +229,6 @@ class PruningFineTuner:
         for batch_idx, (data, target) in enumerate(self.test_loader):
             if self.args.cuda:
                 data, target = data.cuda(), target.cuda()
-            data, target = Variable(data), Variable(target)
-
             self.model.zero_grad()
             with torch.enable_grad():
                 output = self.model(data)

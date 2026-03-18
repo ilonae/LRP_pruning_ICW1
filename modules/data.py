@@ -1,9 +1,6 @@
 '''
-Codes for loading the MNIST data
+Codes for loading datasets (HAM10000, CIFAR10, ImageNet, CQ500)
 '''
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
@@ -385,8 +382,10 @@ def get_ham1000():
     data_aug_rate = [15,10,5,50,0,40,5]
     for i in range(7):
         if data_aug_rate[i]:
-            df_train=df_train.append(
-                [df_train.loc[df_train['cell_type_idx'] == i,:]]*(data_aug_rate[i]-1), ignore_index=True)
+            df_train = pd.concat(
+                [df_train] + [df_train.loc[df_train['cell_type_idx'] == i, :]] * (data_aug_rate[i] - 1),
+                ignore_index=True
+            )
 
     df_train = df_train.reset_index()
     df_val = df_val.reset_index()

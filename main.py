@@ -4,7 +4,6 @@
 @author: Seul-Ki Yeom, Philipp Seegerer, Sebastian Lapuschkin, Alexander Binder, Simon Wiedemann, Klaus-Robert Müller, Wojciech Samek
 '''
 
-from __future__ import print_function
 import argparse
 import numpy as np
 import torch
