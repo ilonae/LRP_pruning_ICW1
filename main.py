@@ -46,12 +46,12 @@ def get_args():
     # parser.add_argument('--prune', action='store_true', help='pruning model')
     # parser.add_argument('--relevance', action='store_true', help='Compute relevances')
     parser.add_argument('--norm', action='store_true', help='add normalization')
-    parser.add_argument('--resume', type=bool, default=True, metavar='N',
-                        help='if we have pretrained model')
-    parser.add_argument('--train', type=bool, default=False, metavar='N',
-                        help='training data')
-    parser.add_argument('--prune', type=bool, default=True, metavar='N',
-                        help='pruning model')
+    parser.add_argument('--resume', action=argparse.BooleanOptionalAction, default=True,
+                        help='load pretrained checkpoint (use --no-resume to skip)')
+    parser.add_argument('--train', action=argparse.BooleanOptionalAction, default=False,
+                        help='run training (use --train / --no-train)')
+    parser.add_argument('--prune', action=argparse.BooleanOptionalAction, default=True,
+                        help='run pruning (use --prune / --no-prune)')
     parser.add_argument('--method-type', type=str, default='weight', metavar='N',
                         help='model architecture selection: grad/taylor/weight/lrp')
 
