@@ -74,13 +74,19 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     args = get_args()
 
-    model = {
-        'alexnet': AlexNet(),
-        'vgg16': VGG16(10),
-        'vgg19': VGG19(args.classnum),
-        'resnet18': ResNet18(args.classnum),
-        'resnet50': ResNet50(args.classnum)
-    }[args.arch.lower()]
+    arch = args.arch.lower()
+    if arch == 'alexnet':
+        model = AlexNet()
+    elif arch == 'vgg16':
+        model = VGG16(10)
+    elif arch == 'vgg19':
+        model = VGG19(args.classnum)
+    elif arch == 'resnet18':
+        model = ResNet18(args.classnum)
+    elif arch == 'resnet50':
+        model = ResNet50(args.classnum)
+    else:
+        raise ValueError(f"Unknown architecture: {args.arch}")
 
     if args.resume:
         print("resuming model")
